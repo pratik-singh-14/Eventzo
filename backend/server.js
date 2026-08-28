@@ -1,4 +1,8 @@
+const port = process.env.PORT || 5000;
 
+app.listen(PORT, () => {
+    console.log(`EVENTZO server running on port ${PORT}`);
+});
 // =====================================================
 // EVENTZO BACKEND SERVER
 // =====================================================
