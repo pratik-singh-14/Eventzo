@@ -7,7 +7,7 @@
 // API CONFIGURATION
 // =====================================================
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://eventzo-backend.onrender.com";
 
 console.log("EVENTZO Frontend Loaded");
 console.log("API URL:", API_URL);
