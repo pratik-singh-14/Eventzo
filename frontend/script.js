@@ -1,1083 +1,101 @@
-
 // =====================================================
-// EVENTZO - COMPLETE FRONTEND JAVASCRIPT
-// Events + Search + Register + Email Verification
-// Login + JWT + /ME + Logout
+// EVENTZO FRONTEND
+// API + LOGIN + REGISTER + EVENTS + SEARCH
 // =====================================================
 
 // =====================================================
 // API CONFIGURATION
 // =====================================================
 
-// LOCAL DEVELOPMENT:
-// const API_URL = "http://localhost:5000/api";
+const API_URL = "http://localhost:5000";
 
-// LIVE PRODUCTION BACKEND:
-const API_URL = "https://eventzo-backend.onrender.com/api";
+console.log("EVENTZO Frontend Loaded");
+console.log("API URL:", API_URL);
+
+
+// =====================================================
+// GLOBAL EVENTS DATA
+// =====================================================
 
 let allEvents = [];
 
 
 // =====================================================
-// PAGE LOAD
-// =====================================================
-
-document.addEventListener("DOMContentLoaded", () => {
-    loadEvents();
-    checkLogin();
-});
-
-
-// =====================================================
-// LOAD EVENTS
-// =====================================================
-
-async function loadEvents() {
-
-    const loading = document.getElementById("loading");
-    const container = document.getElementById("eventsContainer");
-    const noEvents = document.getElementById("noEvents");
-
-    if (!loading || !container) return;
-
-    loading.style.display = "block";
-
-    if (noEvents) {
-        noEvents.style.display = "none";
-    }
-
-    container.innerHTML = "";
-
-    try {
-
-        const response = await fetch(`${API_URL}/events`);
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            throw new Error(
-                data.message || "Failed to load events"
-            );
-        }
-
-        allEvents = data.events || [];
-
-        loading.style.display = "none";
-
-        displayEvents(allEvents);
-
-    } catch (error) {
-
-        console.error("Load events error:", error);
-
-        loading.style.display = "none";
-
-        container.innerHTML = `
-            <div class="no-events"
-                 style="display:block; grid-column:1/-1;">
-
-                <div>⚠️</div>
-
-                <h3>Unable to load events</h3>
-
-                <p>
-                    Unable to connect to the EVENTZO server.
-                </p>
-
-                <button
-                    class="primary-btn"
-                    onclick="loadEvents()">
-                    Try Again
-                </button>
-
-            </div>
-        `;
-    }
-}
-
-
-// =====================================================
-// DISPLAY EVENTS
-// =====================================================
-
-function displayEvents(events) {
-
-    const container =
-        document.getElementById("eventsContainer");
-
-    const noEvents =
-        document.getElementById("noEvents");
-
-    if (!container) return;
-
-    container.innerHTML = "";
-
-    if (!events || events.length === 0) {
-
-        if (noEvents) {
-            noEvents.style.display = "block";
-        }
-
-        return;
-    }
-
-    if (noEvents) {
-        noEvents.style.display = "none";
-    }
-
-    events.forEach(event => {
-
-        const card =
-            document.createElement("div");
-
-        card.className = "event-card";
-
-        const imageHTML = event.image
-            ? `
-                <img
-                    src="${escapeHTML(event.image)}"
-                    alt="${escapeHTML(event.title || "Event")}"
-                    onerror="this.style.display='none';"
-                >
-              `
-            : getEventIcon(event.category);
-
-        card.innerHTML = `
-
-            <div class="event-image">
-                ${imageHTML}
-            </div>
-
-            <div class="event-content">
-
-                <div class="event-category">
-                    ${escapeHTML(event.category || "Event")}
-                </div>
-
-                <h3 class="event-title">
-                    ${escapeHTML(event.title || "Untitled Event")}
-                </h3>
-
-                <p class="event-description">
-                    ${escapeHTML(
-                        event.description ||
-                        "Join this amazing event."
-                    )}
-                </p>
-
-                <div class="event-info">
-
-                    <div>
-                        📅
-                        ${formatDate(event.date)}
-                    </div>
-
-                    <div>
-                        🕐
-                        ${escapeHTML(
-                            event.time ||
-                            "Time not specified"
-                        )}
-                    </div>
-
-                    <div>
-                        📍
-                        ${escapeHTML(
-                            event.location ||
-                            "Location not specified"
-                        )}
-                    </div>
-
-                    <div>
-                        🎟️
-                        ${event.availableSeats ?? 0}
-                        seats available
-                    </div>
-
-                </div>
-
-                <div class="event-bottom">
-
-                    <div class="event-price">
-
-                        ${
-                            Number(event.price) > 0
-                                ? "₹" + Number(event.price)
-                                : "FREE"
-                        }
-
-                        <small>/ person</small>
-
-                    </div>
-
-                    <button
-                        class="event-button"
-                        onclick="viewEvent('${escapeHTML(event._id)}')">
-
-                        View Event
-
-                    </button>
-
-                </div>
-
-            </div>
-        `;
-
-        container.appendChild(card);
-    });
-}
-
-
-// =====================================================
-// EVENT ICON
-// =====================================================
-
-function getEventIcon(category) {
-
-    const icons = {
-
-        Technology: "💻",
-        Music: "🎵",
-        Sports: "⚽",
-        Workshop: "🧠",
-        Business: "💼",
-        Education: "📚",
-        Entertainment: "🎬"
-
-    };
-
-    return icons[category] || "🎫";
-}
-
-
-// =====================================================
-// FORMAT DATE
-// =====================================================
-
-function formatDate(date) {
-
-    if (!date) {
-        return "Date not specified";
-    }
-
-    const d = new Date(date);
-
-    if (isNaN(d.getTime())) {
-        return "Invalid date";
-    }
-
-    return d.toLocaleDateString(
-        "en-IN",
-        {
-            day: "numeric",
-            month: "short",
-            year: "numeric"
-        }
-    );
-}
-
-
-// =====================================================
-// SEARCH EVENTS
-// =====================================================
-
-function searchEvents() {
-
-    const searchInput =
-        document.getElementById("searchInput");
-
-    const categoryFilter =
-        document.getElementById("categoryFilter");
-
-    if (!searchInput || !categoryFilter) return;
-
-    const search =
-        searchInput.value
-            .toLowerCase()
-            .trim();
-
-    const category =
-        categoryFilter.value;
-
-    const filtered =
-        allEvents.filter(event => {
-
-            const title =
-                (event.title || "")
-                    .toLowerCase();
-
-            const description =
-                (event.description || "")
-                    .toLowerCase();
-
-            const location =
-                (event.location || "")
-                    .toLowerCase();
-
-            const eventCategory =
-                (event.category || "")
-                    .toLowerCase();
-
-            const matchesSearch =
-                !search ||
-                title.includes(search) ||
-                description.includes(search) ||
-                location.includes(search) ||
-                eventCategory.includes(search);
-
-            const matchesCategory =
-                category === "all" ||
-                event.category === category;
-
-            return matchesSearch && matchesCategory;
-        });
-
-    displayEvents(filtered);
-}
-
-
-// =====================================================
-// FILTER EVENTS
-// =====================================================
-
-function filterEvents() {
-    searchEvents();
-}
-
-
-// =====================================================
-// SELECT CATEGORY
-// =====================================================
-
-function selectCategory(category) {
-
-    const select =
-        document.getElementById("categoryFilter");
-
-    if (!select) return;
-
-    select.value = category;
-
-    searchEvents();
-
-    scrollToEvents();
-}
-
-
-// =====================================================
-// SCROLL TO EVENTS
-// =====================================================
-
-function scrollToEvents() {
-
-    const events =
-        document.getElementById("events");
-
-    if (events) {
-
-        events.scrollIntoView({
-            behavior: "smooth"
-        });
-
-    }
-}
-
-
-// =====================================================
-// VIEW EVENT
-// =====================================================
-
-function viewEvent(id) {
-
-    const event =
-        allEvents.find(
-            item => item._id === id
-        );
-
-    if (!event) {
-
-        alert("Event not found.");
-
-        return;
-    }
-
-    const price =
-        Number(event.price) > 0
-            ? `₹${event.price}`
-            : "FREE";
-
-    alert(`
-EVENTZO EVENT
-
-${event.title}
-
-Category: ${event.category || "N/A"}
-
-Date: ${formatDate(event.date)}
-
-Time: ${event.time || "N/A"}
-
-Location: ${event.location || "N/A"}
-
-Price: ${price}
-
-Available Seats: ${event.availableSeats ?? 0}
-
-${event.description || ""}
-    `);
-}
-
-
-// =====================================================
-// REGISTER USER
-// =====================================================
-
-async function registerUser(event) {
-
-    event.preventDefault();
-
-    const name =
-        document
-            .getElementById("registerName")
-            .value
-            .trim();
-
-    const email =
-        document
-            .getElementById("registerEmail")
-            .value
-            .trim()
-            .toLowerCase();
-
-    const password =
-        document
-            .getElementById("registerPassword")
-            .value;
-
-    const message =
-        document.getElementById(
-            "registerMessage"
-        );
-
-    if (!name || !email || !password) {
-
-        showMessage(
-            message,
-            "Please fill all fields.",
-            "error"
-        );
-
-        return;
-    }
-
-    if (password.length < 6) {
-
-        showMessage(
-            message,
-            "Password must be at least 6 characters.",
-            "error"
-        );
-
-        return;
-    }
-
-    showMessage(
-        message,
-        "Creating account...",
-        "normal"
-    );
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/auth/register`,
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        name,
-                        email,
-                        password
-                    })
-                }
-            );
-
-        const data =
-            await getJSON(response);
-
-        if (!response.ok || !data.success) {
-
-            throw new Error(
-                data.message ||
-                "Registration failed"
-            );
-        }
-
-        showMessage(
-            message,
-            "Verification email sent! 📧 Check your Gmail and click the verification link.",
-            "success"
-        );
-
-        const form =
-            document.querySelector(
-                "#registerModal form"
-            );
-
-        if (form) {
-            form.reset();
-        }
-
-        setTimeout(() => {
-
-            switchToLogin();
-
-            const loginMessage =
-                document.getElementById(
-                    "loginMessage"
-                );
-
-            if (loginMessage) {
-
-                showMessage(
-                    loginMessage,
-                    "Please verify your email before logging in.",
-                    "normal"
-                );
-
-            }
-
-        }, 2500);
-
-    } catch (error) {
-
-        console.error(
-            "Registration error:",
-            error
-        );
-
-        showMessage(
-            message,
-            error.message ||
-            "Registration failed.",
-            "error"
-        );
-    }
-}
-
-
-// =====================================================
-// LOGIN USER
-// =====================================================
-
-async function loginUser(event) {
-
-    event.preventDefault();
-
-    const email =
-        document
-            .getElementById("loginEmail")
-            .value
-            .trim()
-            .toLowerCase();
-
-    const password =
-        document
-            .getElementById("loginPassword")
-            .value;
-
-    const message =
-        document.getElementById(
-            "loginMessage"
-        );
-
-    if (!email || !password) {
-
-        showMessage(
-            message,
-            "Email and password are required.",
-            "error"
-        );
-
-        return;
-    }
-
-    showMessage(
-        message,
-        "Logging in...",
-        "normal"
-    );
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/auth/login`,
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        email,
-                        password
-                    })
-                }
-            );
-
-        const data =
-            await getJSON(response);
-
-        if (
-            response.status === 403 &&
-            data.message
-        ) {
-
-            showMessage(
-                message,
-                "📧 " + data.message,
-                "error"
-            );
-
-            return;
-        }
-
-        if (!response.ok || !data.success) {
-
-            throw new Error(
-                data.message ||
-                "Login failed"
-            );
-        }
-
-        if (!data.token) {
-
-            throw new Error(
-                "Login succeeded but server did not return a token."
-            );
-        }
-
-        localStorage.setItem(
-            "eventzoToken",
-            data.token
-        );
-
-        if (data.user) {
-
-            localStorage.setItem(
-                "eventzoUser",
-                JSON.stringify(data.user)
-            );
-
-        }
-
-        showMessage(
-            message,
-            "Login successful! 🎉",
-            "success"
-        );
-
-        const currentUser =
-            await getCurrentUser();
-
-        if (!currentUser) {
-
-            clearAuth();
-
-            throw new Error(
-                "Login verification failed. Please try again."
-            );
-        }
-
-        const form =
-            document.querySelector(
-                "#loginModal form"
-            );
-
-        if (form) {
-            form.reset();
-        }
-
-        checkLogin();
-
-        setTimeout(() => {
-
-            closeModals();
-
-        }, 800);
-
-    } catch (error) {
-
-        console.error(
-            "Login error:",
-            error
-        );
-
-        showMessage(
-            message,
-            error.message ||
-            "Login failed.",
-            "error"
-        );
-    }
-}
-
-
-// =====================================================
-// CHECK LOGIN
-// =====================================================
-
-async function checkLogin() {
-
-    const navButtons =
-        document.querySelector(
-            ".nav-buttons"
-        );
-
-    if (!navButtons) return;
-
-    const token =
-        localStorage.getItem(
-            "eventzoToken"
-        );
-
-    if (!token) {
-
-        showLoggedOutNavbar();
-
-        return;
-    }
-
-    try {
-
-        navButtons.innerHTML = `
-            <span
-                style="
-                    color:#aab4c6;
-                    font-size:13px;
-                    padding:10px;
-                ">
-                Checking account...
-            </span>
-        `;
-
-        const user =
-            await getCurrentUser();
-
-        if (!user) {
-
-            clearAuth();
-
-            showLoggedOutNavbar();
-
-            return;
-        }
-
-        localStorage.setItem(
-            "eventzoUser",
-            JSON.stringify(user)
-        );
-
-        showLoggedInNavbar(user);
-
-    } catch (error) {
-
-        console.error(
-            "Check login error:",
-            error
-        );
-
-        clearAuth();
-
-        showLoggedOutNavbar();
-    }
-}
-
-
-// =====================================================
-// GET CURRENT USER - /ME
-// =====================================================
-
-async function getCurrentUser() {
-
-    const token =
-        localStorage.getItem(
-            "eventzoToken"
-        );
-
-    if (!token) {
-        return null;
-    }
-
-    try {
-
-        const response =
-            await fetch(
-                `${API_URL}/auth/me`,
-                {
-                    method: "GET",
-
-                    headers: {
-                        "Authorization":
-                            `Bearer ${token}`,
-
-                        "Content-Type":
-                            "application/json"
-                    }
-                }
-            );
-
-        const data =
-            await getJSON(response);
-
-        if (
-            response.status === 401
-        ) {
-
-            console.warn(
-                "JWT expired or invalid."
-            );
-
-            clearAuth();
-
-            return null;
-        }
-
-        if (!response.ok || !data.success) {
-
-            throw new Error(
-                data.message ||
-                "Unable to get current user"
-            );
-        }
-
-        return data.user || null;
-
-    } catch (error) {
-
-        console.error(
-            "/me error:",
-            error
-        );
-
-        throw error;
-    }
-}
-
-
-// =====================================================
-// SHOW LOGGED-IN NAVBAR
-// =====================================================
-
-function showLoggedInNavbar(user) {
-
-    const navButtons =
-        document.querySelector(
-            ".nav-buttons"
-        );
-
-    if (!navButtons) return;
-
-    const name =
-        escapeHTML(
-            user.name || "User"
-        );
-
-    navButtons.innerHTML = `
-
-        <span
-            style="
-                color:#aab4c6;
-                font-size:13px;
-                padding:10px;
-            "
-        >
-
-            Hi, ${name} 👋
-
-        </span>
-
-        <button
-            class="register-btn"
-            onclick="logoutUser()">
-
-            Logout
-
-        </button>
-
-    `;
-}
-
-
-// =====================================================
-// SHOW LOGGED-OUT NAVBAR
-// =====================================================
-
-function showLoggedOutNavbar() {
-
-    const navButtons =
-        document.querySelector(
-            ".nav-buttons"
-        );
-
-    if (!navButtons) return;
-
-    navButtons.innerHTML = `
-
-        <button
-            class="login-btn"
-            onclick="openLogin()">
-
-            Login
-
-        </button>
-
-        <button
-            class="register-btn"
-            onclick="openRegister()">
-
-            Register
-
-        </button>
-
-    `;
-}
-
-
-// =====================================================
-// LOGOUT
-// =====================================================
-
-function logoutUser() {
-
-    clearAuth();
-
-    showLoggedOutNavbar();
-
-    alert(
-        "You have been logged out."
-    );
-}
-
-
-// =====================================================
-// CLEAR AUTH DATA
-// =====================================================
-
-function clearAuth() {
-
-    localStorage.removeItem(
-        "eventzoToken"
-    );
-
-    localStorage.removeItem(
-        "eventzoUser"
-    );
-}
-
-
-// =====================================================
-// OPEN LOGIN
+// MODAL FUNCTIONS
 // =====================================================
 
 function openLogin() {
 
-    closeModals();
+    const loginModal =
+        document.getElementById("loginModal");
 
-    const modal =
-        document.getElementById(
-            "loginModal"
-        );
+    const registerModal =
+        document.getElementById("registerModal");
 
-    if (modal) {
-
-        modal.classList.add(
-            "active"
-        );
-
+    if (registerModal) {
+        registerModal.style.display = "none";
     }
+
+    if (loginModal) {
+        loginModal.style.display = "flex";
+    }
+
 }
 
-
-// =====================================================
-// OPEN REGISTER
-// =====================================================
 
 function openRegister() {
 
-    closeModals();
+    const loginModal =
+        document.getElementById("loginModal");
 
-    const modal =
-        document.getElementById(
-            "registerModal"
-        );
+    const registerModal =
+        document.getElementById("registerModal");
 
-    if (modal) {
-
-        modal.classList.add(
-            "active"
-        );
-
+    if (loginModal) {
+        loginModal.style.display = "none";
     }
+
+    if (registerModal) {
+        registerModal.style.display = "flex";
+    }
+
 }
 
-
-// =====================================================
-// CLOSE MODALS
-// =====================================================
 
 function closeModals() {
 
-    document
-        .querySelectorAll(".modal")
-        .forEach(modal => {
+    const loginModal =
+        document.getElementById("loginModal");
 
-            modal.classList.remove(
-                "active"
-            );
+    const registerModal =
+        document.getElementById("registerModal");
 
-        });
+    if (loginModal) {
+        loginModal.style.display = "none";
+    }
+
+    if (registerModal) {
+        registerModal.style.display = "none";
+    }
+
 }
 
-
-// =====================================================
-// SWITCH TO LOGIN
-// =====================================================
-
-function switchToLogin() {
-
-    closeModals();
-
-    setTimeout(() => {
-
-        openLogin();
-
-    }, 100);
-}
-
-
-// =====================================================
-// SWITCH TO REGISTER
-// =====================================================
 
 function switchToRegister() {
 
     closeModals();
 
-    setTimeout(() => {
+    openRegister();
 
-        openRegister();
+}
 
-    }, 100);
+
+function switchToLogin() {
+
+    closeModals();
+
+    openLogin();
+
 }
 
 
@@ -1085,13 +103,30 @@ function switchToRegister() {
 // CLOSE MODAL WHEN CLICKING OUTSIDE
 // =====================================================
 
-document.addEventListener(
+window.addEventListener(
     "click",
-    event => {
+    function (event) {
+
+        const loginModal =
+            document.getElementById("loginModal");
+
+        const registerModal =
+            document.getElementById("registerModal");
+
 
         if (
-            event.target.classList &&
-            event.target.classList.contains("modal")
+            loginModal &&
+            event.target === loginModal
+        ) {
+
+            closeModals();
+
+        }
+
+
+        if (
+            registerModal &&
+            event.target === registerModal
         ) {
 
             closeModals();
@@ -1103,12 +138,12 @@ document.addEventListener(
 
 
 // =====================================================
-// ESC KEY
+// ESCAPE KEY CLOSE MODAL
 // =====================================================
 
 document.addEventListener(
     "keydown",
-    event => {
+    function (event) {
 
         if (event.key === "Escape") {
 
@@ -1121,74 +156,1019 @@ document.addEventListener(
 
 
 // =====================================================
-// GET JSON SAFELY
+// SCROLL TO EVENTS
 // =====================================================
 
-async function getJSON(response) {
+function scrollToEvents() {
 
-    const text =
-        await response.text();
+    const eventsSection =
+        document.getElementById("events");
 
-    if (!text) {
+    if (eventsSection) {
 
-        return {};
+        eventsSection.scrollIntoView({
+            behavior: "smooth"
+        });
+
     }
 
-    try {
-
-        return JSON.parse(text);
-
-    } catch {
-
-        console.error(
-            "Server returned non-JSON response:",
-            text
-        );
-
-        return {
-            success: false,
-            message:
-                "Server returned an invalid response."
-        };
-    }
 }
 
 
 // =====================================================
-// FORM MESSAGE
+// REGISTER USER
+// =====================================================
+
+async function registerUser(event) {
+
+    event.preventDefault();
+
+
+    const nameInput =
+        document.getElementById("registerName");
+
+    const emailInput =
+        document.getElementById("registerEmail");
+
+    const passwordInput =
+        document.getElementById("registerPassword");
+
+    const message =
+        document.getElementById("registerMessage");
+
+
+    const name =
+        nameInput.value.trim();
+
+    const email =
+        emailInput.value.trim();
+
+    const password =
+        passwordInput.value;
+
+
+    if (!name || !email || !password) {
+
+        showMessage(
+            message,
+            "Please fill all fields.",
+            false
+        );
+
+        return;
+
+    }
+
+
+    if (password.length < 6) {
+
+        showMessage(
+            message,
+            "Password must contain at least 6 characters.",
+            false
+        );
+
+        return;
+
+    }
+
+
+    showMessage(
+        message,
+        "Creating your account...",
+        true
+    );
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/api/auth/register`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        name,
+                        email,
+                        password
+
+                    })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (data.success) {
+
+            showMessage(
+                message,
+                data.message ||
+                "Registration successful. Check your email.",
+                true
+            );
+
+
+            document.querySelector(
+                "#registerModal form"
+            ).reset();
+
+
+        } else {
+
+            showMessage(
+                message,
+                data.message ||
+                "Registration failed.",
+                false
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Registration error:",
+            error
+        );
+
+
+        showMessage(
+            message,
+            "Cannot connect to EVENTZO backend.",
+            false
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// LOGIN USER
+// =====================================================
+
+async function loginUser(event) {
+
+    event.preventDefault();
+
+
+    const emailInput =
+        document.getElementById("loginEmail");
+
+    const passwordInput =
+        document.getElementById("loginPassword");
+
+    const message =
+        document.getElementById("loginMessage");
+
+
+    const email =
+        emailInput.value.trim();
+
+    const password =
+        passwordInput.value;
+
+
+    if (!email || !password) {
+
+        showMessage(
+            message,
+            "Please enter email and password.",
+            false
+        );
+
+        return;
+
+    }
+
+
+    showMessage(
+        message,
+        "Logging in...",
+        true
+    );
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/api/auth/login`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        email,
+                        password
+
+                    })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (data.success) {
+
+            // Save JWT token
+            localStorage.setItem(
+                "eventzo_token",
+                data.token
+            );
+
+
+            // Save user
+            localStorage.setItem(
+                "eventzo_user",
+                JSON.stringify(data.user)
+            );
+
+
+            showMessage(
+                message,
+                "Login successful! 🎉",
+                true
+            );
+
+
+            document.querySelector(
+                "#loginModal form"
+            ).reset();
+
+
+            setTimeout(
+                function () {
+
+                    closeModals();
+
+                    updateNavbar();
+
+                },
+                800
+            );
+
+
+        } else {
+
+            showMessage(
+                message,
+                data.message ||
+                "Login failed.",
+                false
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Login error:",
+            error
+        );
+
+
+        showMessage(
+            message,
+            "Cannot connect to EVENTZO backend.",
+            false
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// SHOW FORM MESSAGE
 // =====================================================
 
 function showMessage(
     element,
     text,
-    type = "normal"
+    success
 ) {
 
-    if (!element) return;
+    if (!element) {
+        return;
+    }
 
-    element.textContent = text;
 
-    if (type === "success") {
+    element.textContent =
+        text;
+
+
+    if (success) {
 
         element.style.color =
             "#00f5a0";
 
-    } else if (type === "error") {
-
-        element.style.color =
-            "#ff6b6b";
-
     } else {
 
         element.style.color =
-            "#aab4c6";
+            "#ff5c5c";
 
     }
+
 }
 
 
 // =====================================================
-// HTML ESCAPE / SECURITY
+// GET CURRENT USER
+// =====================================================
+
+async function getCurrentUser() {
+
+    const token =
+        localStorage.getItem(
+            "eventzo_token"
+        );
+
+
+    if (!token) {
+
+        return null;
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/api/auth/me`,
+                {
+                    method: "GET",
+
+                    headers: {
+
+                        "Authorization":
+                            `Bearer ${token}`
+
+                    }
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.success) {
+
+            localStorage.removeItem(
+                "eventzo_token"
+            );
+
+            localStorage.removeItem(
+                "eventzo_user"
+            );
+
+            return null;
+
+        }
+
+
+        return data.user;
+
+
+    } catch (error) {
+
+        console.error(
+            "Get user error:",
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
+
+// =====================================================
+// LOGOUT
+// =====================================================
+
+async function logoutUser() {
+
+    const token =
+        localStorage.getItem(
+            "eventzo_token"
+        );
+
+
+    try {
+
+        if (token) {
+
+            await fetch(
+                `${API_URL}/api/auth/logout`,
+                {
+                    method: "POST",
+
+                    headers: {
+
+                        "Authorization":
+                            `Bearer ${token}`
+
+                    }
+
+                }
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Logout error:",
+            error
+        );
+
+    }
+
+
+    localStorage.removeItem(
+        "eventzo_token"
+    );
+
+    localStorage.removeItem(
+        "eventzo_user"
+    );
+
+
+    location.reload();
+
+}
+
+
+// =====================================================
+// UPDATE NAVBAR
+// =====================================================
+
+async function updateNavbar() {
+
+    const user =
+        await getCurrentUser();
+
+
+    const navButtons =
+        document.querySelector(
+            ".nav-buttons"
+        );
+
+
+    if (!navButtons) {
+        return;
+    }
+
+
+    if (user) {
+
+        navButtons.innerHTML = `
+
+            <span
+                style="
+                color:#00f5a0;
+                font-weight:600;
+                margin-right:10px;
+                "
+            >
+                Hi, ${escapeHTML(user.name)}
+            </span>
+
+            <button
+                class="login-btn"
+                onclick="logoutUser()"
+            >
+                Logout
+            </button>
+
+        `;
+
+    }
+
+}
+
+
+// =====================================================
+// LOAD EVENTS
+// =====================================================
+
+async function loadEvents() {
+
+    const loading =
+        document.getElementById(
+            "loading"
+        );
+
+    const container =
+        document.getElementById(
+            "eventsContainer"
+        );
+
+    const noEvents =
+        document.getElementById(
+            "noEvents"
+        );
+
+
+    if (loading) {
+
+        loading.style.display =
+            "block";
+
+    }
+
+
+    if (container) {
+
+        container.innerHTML =
+            "";
+
+    }
+
+
+    if (noEvents) {
+
+        noEvents.style.display =
+            "none";
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/api/events`
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.success) {
+
+            throw new Error(
+                data.message ||
+                "Failed to load events"
+            );
+
+        }
+
+
+        allEvents =
+            data.events || [];
+
+
+        renderEvents(
+            allEvents
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Load events error:",
+            error
+        );
+
+
+        allEvents = [];
+
+
+        if (loading) {
+
+            loading.style.display =
+                "none";
+
+        }
+
+
+        if (noEvents) {
+
+            noEvents.style.display =
+                "block";
+
+            noEvents.querySelector(
+                "h3"
+            ).textContent =
+                "Unable to load events";
+
+            noEvents.querySelector(
+                "p"
+            ).textContent =
+                "Make sure EVENTZO backend is running.";
+
+        }
+
+    }
+
+}
+
+
+// =====================================================
+// RENDER EVENTS
+// =====================================================
+
+function renderEvents(events) {
+
+    const loading =
+        document.getElementById(
+            "loading"
+        );
+
+    const container =
+        document.getElementById(
+            "eventsContainer"
+        );
+
+    const noEvents =
+        document.getElementById(
+            "noEvents"
+        );
+
+
+    if (loading) {
+
+        loading.style.display =
+            "none";
+
+    }
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML =
+        "";
+
+
+    if (!events || events.length === 0) {
+
+        if (noEvents) {
+
+            noEvents.style.display =
+                "block";
+
+        }
+
+        return;
+
+    }
+
+
+    if (noEvents) {
+
+        noEvents.style.display =
+            "none";
+
+    }
+
+
+    events.forEach(
+        function (event) {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+
+            card.className =
+                "event-card";
+
+
+            const date =
+                event.date
+                    ? new Date(
+                        event.date
+                    ).toLocaleDateString(
+                        "en-IN",
+                        {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric"
+                        }
+                    )
+                    : "Date TBA";
+
+
+            const price =
+                Number(event.price || 0);
+
+
+            card.innerHTML = `
+
+                <div class="event-image">
+
+                    ${
+                        event.image
+                        ?
+                        `<img
+                            src="${escapeHTML(event.image)}"
+                            alt="${escapeHTML(event.title)}"
+                            style="
+                            width:100%;
+                            height:100%;
+                            object-fit:cover;
+                            "
+                        >`
+                        :
+                        `<div
+                            style="
+                            font-size:60px;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            height:100%;
+                            "
+                        >
+                            🎫
+                        </div>`
+                    }
+
+                </div>
+
+
+                <div class="event-content">
+
+                    <span class="event-category">
+
+                        ${escapeHTML(
+                            event.category ||
+                            "Other"
+                        )}
+
+                    </span>
+
+
+                    <h3>
+
+                        ${escapeHTML(
+                            event.title
+                        )}
+
+                    </h3>
+
+
+                    <p>
+
+                        ${escapeHTML(
+                            event.description ||
+                            "Join this amazing EVENTZO event."
+                        )}
+
+                    </p>
+
+
+                    <div class="event-details">
+
+                        <span>
+                            📅 ${date}
+                        </span>
+
+                        <span>
+                            🕐 ${escapeHTML(
+                                event.time ||
+                                "Time TBA"
+                            )}
+                        </span>
+
+                        <span>
+                            📍 ${escapeHTML(
+                                event.location ||
+                                "Location TBA"
+                            )}
+                        </span>
+
+                    </div>
+
+
+                    <div class="event-bottom">
+
+                        <strong>
+
+                            ${
+                                price === 0
+                                ? "FREE"
+                                : "₹" +
+                                  price.toLocaleString(
+                                      "en-IN"
+                                  )
+                            }
+
+                        </strong>
+
+
+                        <span>
+
+                            ${
+                                event.availableSeats !== undefined
+                                ? event.availableSeats +
+                                  " seats left"
+                                : ""
+                            }
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `;
+
+
+            container.appendChild(
+                card
+            );
+
+        }
+    );
+
+}
+
+
+// =====================================================
+// SEARCH EVENTS
+// =====================================================
+
+function searchEvents() {
+
+    const input =
+        document.getElementById(
+            "searchInput"
+        );
+
+
+    if (!input) {
+        return;
+    }
+
+
+    const search =
+        input.value
+            .trim()
+            .toLowerCase();
+
+
+    const filtered =
+        allEvents.filter(
+            function (event) {
+
+                return (
+
+                    String(
+                        event.title || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
+
+                    ||
+
+                    String(
+                        event.description || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
+
+                    ||
+
+                    String(
+                        event.category || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
+
+                    ||
+
+                    String(
+                        event.location || ""
+                    )
+                    .toLowerCase()
+                    .includes(search)
+
+                );
+
+            }
+        );
+
+
+    renderEvents(
+        filtered
+    );
+
+}
+
+
+// =====================================================
+// FILTER EVENTS
+// =====================================================
+
+function filterEvents() {
+
+    const filter =
+        document.getElementById(
+            "categoryFilter"
+        );
+
+
+    if (!filter) {
+        return;
+    }
+
+
+    const category =
+        filter.value;
+
+
+    if (category === "all") {
+
+        renderEvents(
+            allEvents
+        );
+
+        return;
+
+    }
+
+
+    const filtered =
+        allEvents.filter(
+            function (event) {
+
+                return String(
+                    event.category || ""
+                ).toLowerCase()
+                ===
+                category.toLowerCase();
+
+            }
+        );
+
+
+    renderEvents(
+        filtered
+    );
+
+}
+
+
+// =====================================================
+// SELECT CATEGORY
+// =====================================================
+
+function selectCategory(category) {
+
+    const filter =
+        document.getElementById(
+            "categoryFilter"
+        );
+
+
+    if (filter) {
+
+        filter.value =
+            category;
+
+    }
+
+
+    filterEvents();
+
+
+    scrollToEvents();
+
+}
+
+
+// =====================================================
+// HTML ESCAPE
 // =====================================================
 
 function escapeHTML(value) {
@@ -1197,8 +1177,11 @@ function escapeHTML(value) {
         value === null ||
         value === undefined
     ) {
+
         return "";
+
     }
+
 
     return String(value)
 
@@ -1226,4 +1209,66 @@ function escapeHTML(value) {
             /'/g,
             "&#039;"
         );
+
 }
+
+
+// =====================================================
+// API CONNECTION TEST
+// =====================================================
+
+async function testAPI() {
+
+    try {
+
+        const response =
+            await fetch(
+                `${API_URL}/api/test`
+            );
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            "API TEST:",
+            data
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "API connection failed:",
+            error
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// PAGE INITIALIZATION
+// =====================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    async function () {
+
+        console.log(
+            "EVENTZO initialized 🚀"
+        );
+
+
+        await testAPI();
+
+
+        await loadEvents();
+
+
+        await updateNavbar();
+
+    }
+);
