@@ -5,7 +5,15 @@
 // Login + JWT + /ME + Logout
 // =====================================================
 
-const API_URL = "http://localhost:5000/api";
+// =====================================================
+// API CONFIGURATION
+// =====================================================
+
+// LOCAL DEVELOPMENT:
+// const API_URL = "http://localhost:5000/api";
+
+// LIVE PRODUCTION BACKEND:
+const API_URL = "https://eventzo-backend.onrender.com/api";
 
 let allEvents = [];
 
@@ -73,7 +81,7 @@ async function loadEvents() {
                 <h3>Unable to load events</h3>
 
                 <p>
-                    Make sure your EVENTZO backend is running.
+                    Unable to connect to the EVENTZO server.
                 </p>
 
                 <button
@@ -117,14 +125,12 @@ function displayEvents(events) {
         noEvents.style.display = "none";
     }
 
-
     events.forEach(event => {
 
         const card =
             document.createElement("div");
 
         card.className = "event-card";
-
 
         const imageHTML = event.image
             ? `
@@ -135,7 +141,6 @@ function displayEvents(events) {
                 >
               `
             : getEventIcon(event.category);
-
 
         card.innerHTML = `
 
@@ -294,7 +299,6 @@ function searchEvents() {
     const category =
         categoryFilter.value;
 
-
     const filtered =
         allEvents.filter(event => {
 
@@ -314,7 +318,6 @@ function searchEvents() {
                 (event.category || "")
                     .toLowerCase();
 
-
             const matchesSearch =
                 !search ||
                 title.includes(search) ||
@@ -322,15 +325,12 @@ function searchEvents() {
                 location.includes(search) ||
                 eventCategory.includes(search);
 
-
             const matchesCategory =
                 category === "all" ||
                 event.category === category;
 
-
             return matchesSearch && matchesCategory;
         });
-
 
     displayEvents(filtered);
 }
@@ -394,7 +394,6 @@ function viewEvent(id) {
             item => item._id === id
         );
 
-
     if (!event) {
 
         alert("Event not found.");
@@ -402,12 +401,10 @@ function viewEvent(id) {
         return;
     }
 
-
     const price =
         Number(event.price) > 0
             ? `₹${event.price}`
             : "FREE";
-
 
     alert(`
 EVENTZO EVENT
@@ -439,13 +436,11 @@ async function registerUser(event) {
 
     event.preventDefault();
 
-
     const name =
         document
             .getElementById("registerName")
             .value
             .trim();
-
 
     const email =
         document
@@ -454,18 +449,15 @@ async function registerUser(event) {
             .trim()
             .toLowerCase();
 
-
     const password =
         document
             .getElementById("registerPassword")
             .value;
 
-
     const message =
         document.getElementById(
             "registerMessage"
         );
-
 
     if (!name || !email || !password) {
 
@@ -478,7 +470,6 @@ async function registerUser(event) {
         return;
     }
 
-
     if (password.length < 6) {
 
         showMessage(
@@ -490,13 +481,11 @@ async function registerUser(event) {
         return;
     }
 
-
     showMessage(
         message,
         "Creating account...",
         "normal"
     );
-
 
     try {
 
@@ -519,10 +508,8 @@ async function registerUser(event) {
                 }
             );
 
-
         const data =
             await getJSON(response);
-
 
         if (!response.ok || !data.success) {
 
@@ -532,20 +519,11 @@ async function registerUser(event) {
             );
         }
 
-
-        // -------------------------------------------------
-        // IMPORTANT:
-        // Do NOT save a token here.
-        //
-        // User must verify email first.
-        // -------------------------------------------------
-
         showMessage(
             message,
             "Verification email sent! 📧 Check your Gmail and click the verification link.",
             "success"
         );
-
 
         const form =
             document.querySelector(
@@ -555,11 +533,6 @@ async function registerUser(event) {
         if (form) {
             form.reset();
         }
-
-
-        // Open login after a short delay.
-        // Login will still be blocked by backend
-        // until email verification is completed.
 
         setTimeout(() => {
 
@@ -582,14 +555,12 @@ async function registerUser(event) {
 
         }, 2500);
 
-
     } catch (error) {
 
         console.error(
             "Registration error:",
             error
         );
-
 
         showMessage(
             message,
@@ -609,7 +580,6 @@ async function loginUser(event) {
 
     event.preventDefault();
 
-
     const email =
         document
             .getElementById("loginEmail")
@@ -617,18 +587,15 @@ async function loginUser(event) {
             .trim()
             .toLowerCase();
 
-
     const password =
         document
             .getElementById("loginPassword")
             .value;
 
-
     const message =
         document.getElementById(
             "loginMessage"
         );
-
 
     if (!email || !password) {
 
@@ -641,13 +608,11 @@ async function loginUser(event) {
         return;
     }
 
-
     showMessage(
         message,
         "Logging in...",
         "normal"
     );
-
 
     try {
 
@@ -669,14 +634,8 @@ async function loginUser(event) {
                 }
             );
 
-
         const data =
             await getJSON(response);
-
-
-        // -------------------------------------------------
-        // EMAIL NOT VERIFIED
-        // -------------------------------------------------
 
         if (
             response.status === 403 &&
@@ -692,11 +651,6 @@ async function loginUser(event) {
             return;
         }
 
-
-        // -------------------------------------------------
-        // LOGIN FAILED
-        // -------------------------------------------------
-
         if (!response.ok || !data.success) {
 
             throw new Error(
@@ -705,11 +659,6 @@ async function loginUser(event) {
             );
         }
 
-
-        // -------------------------------------------------
-        // SAVE JWT TOKEN
-        // -------------------------------------------------
-
         if (!data.token) {
 
             throw new Error(
@@ -717,16 +666,10 @@ async function loginUser(event) {
             );
         }
 
-
         localStorage.setItem(
             "eventzoToken",
             data.token
         );
-
-
-        // -------------------------------------------------
-        // SAVE USER FROM LOGIN RESPONSE
-        // -------------------------------------------------
 
         if (data.user) {
 
@@ -737,21 +680,14 @@ async function loginUser(event) {
 
         }
 
-
         showMessage(
             message,
             "Login successful! 🎉",
             "success"
         );
 
-
-        // -------------------------------------------------
-        // VERIFY TOKEN WITH /ME
-        // -------------------------------------------------
-
         const currentUser =
             await getCurrentUser();
-
 
         if (!currentUser) {
 
@@ -762,11 +698,6 @@ async function loginUser(event) {
             );
         }
 
-
-        // -------------------------------------------------
-        // RESET LOGIN FORM
-        // -------------------------------------------------
-
         const form =
             document.querySelector(
                 "#loginModal form"
@@ -776,17 +707,7 @@ async function loginUser(event) {
             form.reset();
         }
 
-
-        // -------------------------------------------------
-        // UPDATE NAVBAR
-        // -------------------------------------------------
-
         checkLogin();
-
-
-        // -------------------------------------------------
-        // CLOSE LOGIN MODAL
-        // -------------------------------------------------
 
         setTimeout(() => {
 
@@ -794,14 +715,12 @@ async function loginUser(event) {
 
         }, 800);
 
-
     } catch (error) {
 
         console.error(
             "Login error:",
             error
         );
-
 
         showMessage(
             message,
@@ -816,16 +735,6 @@ async function loginUser(event) {
 // =====================================================
 // CHECK LOGIN
 // =====================================================
-//
-// This runs when the page opens.
-//
-// If a token exists:
-// 1. Call /api/auth/me
-// 2. Verify the JWT is still valid
-// 3. Get fresh user information
-// 4. Display user's name
-//
-// =====================================================
 
 async function checkLogin() {
 
@@ -834,19 +743,12 @@ async function checkLogin() {
             ".nav-buttons"
         );
 
-
     if (!navButtons) return;
-
 
     const token =
         localStorage.getItem(
             "eventzoToken"
         );
-
-
-    // -------------------------------------------------
-    // NO TOKEN
-    // -------------------------------------------------
 
     if (!token) {
 
@@ -854,12 +756,6 @@ async function checkLogin() {
 
         return;
     }
-
-
-    // -------------------------------------------------
-    // TOKEN EXISTS
-    // CHECK /ME
-    // -------------------------------------------------
 
     try {
 
@@ -874,10 +770,8 @@ async function checkLogin() {
             </span>
         `;
 
-
         const user =
             await getCurrentUser();
-
 
         if (!user) {
 
@@ -888,19 +782,12 @@ async function checkLogin() {
             return;
         }
 
-
-        // -------------------------------------------------
-        // SAVE FRESH USER DATA
-        // -------------------------------------------------
-
         localStorage.setItem(
             "eventzoUser",
             JSON.stringify(user)
         );
 
-
         showLoggedInNavbar(user);
-
 
     } catch (error) {
 
@@ -908,7 +795,6 @@ async function checkLogin() {
             "Check login error:",
             error
         );
-
 
         clearAuth();
 
@@ -928,11 +814,9 @@ async function getCurrentUser() {
             "eventzoToken"
         );
 
-
     if (!token) {
         return null;
     }
-
 
     try {
 
@@ -952,14 +836,8 @@ async function getCurrentUser() {
                 }
             );
 
-
         const data =
             await getJSON(response);
-
-
-        // -------------------------------------------------
-        // TOKEN INVALID / EXPIRED
-        // -------------------------------------------------
 
         if (
             response.status === 401
@@ -974,7 +852,6 @@ async function getCurrentUser() {
             return null;
         }
 
-
         if (!response.ok || !data.success) {
 
             throw new Error(
@@ -983,9 +860,7 @@ async function getCurrentUser() {
             );
         }
 
-
         return data.user || null;
-
 
     } catch (error) {
 
@@ -1010,15 +885,12 @@ function showLoggedInNavbar(user) {
             ".nav-buttons"
         );
 
-
     if (!navButtons) return;
-
 
     const name =
         escapeHTML(
             user.name || "User"
         );
-
 
     navButtons.innerHTML = `
 
@@ -1033,7 +905,6 @@ function showLoggedInNavbar(user) {
             Hi, ${name} 👋
 
         </span>
-
 
         <button
             class="register-btn"
@@ -1058,9 +929,7 @@ function showLoggedOutNavbar() {
             ".nav-buttons"
         );
 
-
     if (!navButtons) return;
-
 
     navButtons.innerHTML = `
 
@@ -1071,7 +940,6 @@ function showLoggedOutNavbar() {
             Login
 
         </button>
-
 
         <button
             class="register-btn"
@@ -1125,12 +993,10 @@ function openLogin() {
 
     closeModals();
 
-
     const modal =
         document.getElementById(
             "loginModal"
         );
-
 
     if (modal) {
 
@@ -1150,12 +1016,10 @@ function openRegister() {
 
     closeModals();
 
-
     const modal =
         document.getElementById(
             "registerModal"
         );
-
 
     if (modal) {
 
@@ -1193,7 +1057,6 @@ function switchToLogin() {
 
     closeModals();
 
-
     setTimeout(() => {
 
         openLogin();
@@ -1209,7 +1072,6 @@ function switchToLogin() {
 function switchToRegister() {
 
     closeModals();
-
 
     setTimeout(() => {
 
@@ -1267,12 +1129,10 @@ async function getJSON(response) {
     const text =
         await response.text();
 
-
     if (!text) {
 
         return {};
     }
-
 
     try {
 
@@ -1284,7 +1144,6 @@ async function getJSON(response) {
             "Server returned non-JSON response:",
             text
         );
-
 
         return {
             success: false,
@@ -1307,9 +1166,7 @@ function showMessage(
 
     if (!element) return;
 
-
     element.textContent = text;
-
 
     if (type === "success") {
 
@@ -1342,7 +1199,6 @@ function escapeHTML(value) {
     ) {
         return "";
     }
-
 
     return String(value)
 
